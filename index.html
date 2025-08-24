@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hours Tracker</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+    <meta name="theme-color" content="#4285f4">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Hours Tracker">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM0Mjg1ZjQiLz4KPHN2ZyB4PSI0OCIgeT0iNDgiIHdpZHRoPSI5NiIgaGVpZ2h0PSI5NiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+CjxwYXRoIGQ9Ik0xMiAyQzYuNSAyIDIgNi41IDIgMTJzNC41IDEwIDEwIDEwIDEwLTQuNSAxMC0xMFMxNy41IDIgMTIgMnptNCAxMWgtNFY2aDJ2NWgydjJ6Ii8+Cjwvc3ZnPgo8L3N2Zz4K">
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <h1>Hours Tracker</h1>
+            <div class="sync-status" id="syncStatus">
+                <span class="sync-icon">🔄</span>
+                <span class="sync-text">Ready</span>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-tab="log">Log Hours</button>
+            <button class="nav-tab" data-tab="summary">Summary</button>
+            <button class="nav-tab" data-tab="settings">Settings</button>
+        </nav>
+
+        <!-- Log Hours Tab -->
+        <div class="tab-content active" id="logTab">
+            <div class="card">
+                <h2>Log Today's Hours</h2>
+                <form id="hoursForm" class="hours-form">
+                    <div class="form-group">
+                        <label for="date">Date</label>
+                        <input type="date" id="date" name="date" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="workplace">Workplace</label>
+                        <select id="workplace" name="workplace" required>
+                            <option value="">Select workplace...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="hours">Hours Worked</label>
+                        <input type="number" id="hours" name="hours" step="0.25" min="0" max="24" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="notes">Notes (optional)</label>
+                        <textarea id="notes" name="notes" rows="2" placeholder="Any additional notes..."></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <span class="btn-icon">💾</span>
+                        Log Hours
+                    </button>
+                </form>
+            </div>
+
+            <!-- Recent Entries -->
+            <div class="card">
+                <h3>Recent Entries</h3>
+                <div id="recentEntries" class="recent-entries">
+                    <!-- Entries will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Tab -->
+        <div class="tab-content" id="summaryTab">
+            <div class="card">
+                <h2>Monthly Summary</h2>
+                <div class="month-selector">
+                    <input type="month" id="summaryMonth" name="summaryMonth">
+                    <button id="refreshSummary" class="btn btn-secondary">Refresh</button>
+                </div>
+                <div id="monthlySummary" class="monthly-summary">
+                    <!-- Summary will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="tab-content" id="settingsTab">
+            <div class="card">
+                <h2>Workplaces</h2>
+                <form id="workplaceForm" class="workplace-form">
+                    <div class="form-group">
+                        <label for="workplaceName">Workplace Name</label>
+                        <input type="text" id="workplaceName" name="workplaceName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="hourlyRate">Hourly Rate ($)</label>
+                        <input type="number" id="hourlyRate" name="hourlyRate" step="0.01" min="0">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-secondary">
+                        <span class="btn-icon">➕</span>
+                        Add Workplace
+                    </button>
+                </form>
+                
+                <div id="workplacesList" class="workplaces-list">
+                    <!-- Workplaces will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Google Sheets Sync</h2>
+                <div class="sync-controls">
+                    <button id="connectGoogle" class="btn btn-primary">
+                        <span class="btn-icon">🔗</span>
+                        Connect Google Sheets
+                    </button>
+                    <button id="syncNow" class="btn btn-secondary" style="display: none;">
+                        <span class="btn-icon">🔄</span>
+                        Sync Now
+                    </button>
+                    <div id="googleStatus" class="status-text"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Data Management</h2>
+                <div class="data-controls">
+                    <button id="exportData" class="btn btn-secondary">
+                        <span class="btn-icon">📤</span>
+                        Export Data
+                    </button>
+                    <button id="clearData" class="btn btn-danger">
+                        <span class="btn-icon">🗑️</span>
+                        Clear All Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Syncing...</div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="google-sheets.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
