@@ -62,6 +62,11 @@ class HoursTracker {
         document.getElementById('summaryMonth').addEventListener('change', () => {
             this.updateMonthlySummary();
         });
+        
+        // Monthly export
+        document.getElementById('exportMonthly').addEventListener('click', () => {
+            this.exportMonthlySummary();
+        });
     }
 
     // Setup tab navigation
@@ -424,24 +429,133 @@ class HoursTracker {
         }
     }
 
-    // Export data as JSON
+    // Export all data as CSV
     exportData() {
-        const data = {
-            workplaces: this.workplaces,
-            entries: this.entries,
-            exportDate: new Date().toISOString()
-        };
+        let csvContent = '';
+        
+        // Add header with export info
+        csvContent += `Hours Tracker Export - ${new Date().toLocaleDateString()}\n\n`;
+        
+        // Export workplaces section
+        csvContent += 'WORKPLACES\n';
+        csvContent += 'Name,Hourly Rate\n';
+        this.workplaces.forEach(workplace => {
+            csvContent += `"${workplace.name.replace(/"/g, '""')}",${workplace.hourlyRate}\n`;
+        });
+        
+        csvContent += '\n'; // Empty line separator
+        
+        // Export entries section
+        csvContent += 'ENTRIES\n';
+        csvContent += 'Date,Workplace,Hours,Earnings,Notes\n';
+        
+        this.entries.forEach(entry => {
+            const workplace = this.workplaces.find(w => w.name === entry.workplace);
+            const earnings = workplace ? (entry.hours * workplace.hourlyRate).toFixed(2) : '0.00';
+            const notes = entry.notes ? entry.notes.replace(/"/g, '""') : '';
+            
+            csvContent += `${entry.date},"${entry.workplace.replace(/"/g, '""')}",${entry.hours},${earnings},"${notes}"\n`;
+        });
 
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         
         const a = document.createElement('a');
         a.href = url;
-        a.download = `hours-tracker-export-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `hours-tracker-export-${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
         
         URL.revokeObjectURL(url);
-        this.showNotification('Data exported successfully!', 'success');
+        this.showNotification('Data exported as CSV successfully!', 'success');
+    }
+
+    // Export monthly summary as CSV
+    exportMonthlySummary() {
+        const selectedMonth = document.getElementById('summaryMonth').value;
+        
+        if (!selectedMonth) {
+            this.showNotification('Please select a month to export', 'error');
+            return;
+        }
+        
+        const monthEntries = this.entries.filter(entry => 
+            entry.date.startsWith(selectedMonth)
+        );
+        
+        if (monthEntries.length === 0) {
+            this.showNotification('No entries found for the selected month', 'error');
+            return;
+        }
+        
+        const monthName = this.formatMonth(selectedMonth);
+        let csvContent = '';
+        
+        // Add header with month info
+        csvContent += `Hours Tracker - ${monthName}\n`;
+        csvContent += `Export Date: ${new Date().toLocaleDateString()}\n\n`;
+        
+        // Sort entries by date
+        const sortedEntries = monthEntries.sort((a, b) => a.date.localeCompare(b.date));
+        
+        // Export detailed entries
+        csvContent += 'DETAILED ENTRIES\n';
+        csvContent += 'Date,Day,Workplace,Hours,Hourly Rate,Earnings,Notes\n';
+        
+        sortedEntries.forEach(entry => {
+            const workplace = this.workplaces.find(w => w.name === entry.workplace);
+            const hourlyRate = workplace ? workplace.hourlyRate : 0;
+            const earnings = (entry.hours * hourlyRate).toFixed(2);
+            const notes = entry.notes ? entry.notes.replace(/"/g, '""') : '';
+            const dayOfWeek = new Date(entry.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' });
+            
+            csvContent += `${entry.date},${dayOfWeek},"${entry.workplace.replace(/"/g, '""')}",${entry.hours},${hourlyRate},${earnings},"${notes}"\n`;
+        });
+        
+        csvContent += '\n'; // Empty line separator
+        
+        // Export summary by workplace
+        csvContent += 'SUMMARY BY WORKPLACE\n';
+        csvContent += 'Workplace,Total Hours,Hourly Rate,Total Earnings\n';
+        
+        const summary = {};
+        let totalHours = 0;
+        let totalEarnings = 0;
+        
+        sortedEntries.forEach(entry => {
+            if (!summary[entry.workplace]) {
+                const workplace = this.workplaces.find(w => w.name === entry.workplace);
+                summary[entry.workplace] = {
+                    hours: 0,
+                    hourlyRate: workplace ? workplace.hourlyRate : 0,
+                    earnings: 0
+                };
+            }
+            
+            summary[entry.workplace].hours += entry.hours;
+            summary[entry.workplace].earnings += entry.hours * summary[entry.workplace].hourlyRate;
+            totalHours += entry.hours;
+            totalEarnings += entry.hours * summary[entry.workplace].hourlyRate;
+        });
+        
+        Object.entries(summary).forEach(([workplace, data]) => {
+            csvContent += `"${workplace.replace(/"/g, '""')}",${data.hours},${data.hourlyRate},${data.earnings.toFixed(2)}\n`;
+        });
+        
+        // Add total row
+        csvContent += `"TOTAL",${totalHours},,${totalEarnings.toFixed(2)}\n`;
+        
+        // Create and download the file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        const fileName = `hours-tracker-${selectedMonth}-${new Date().toISOString().split('T')[0]}.csv`;
+        a.download = fileName;
+        a.click();
+        
+        URL.revokeObjectURL(url);
+        this.showNotification(`${monthName} exported as CSV successfully!`, 'success');
     }
 
     // Clear all data
